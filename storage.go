@@ -2,14 +2,17 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"io"
 	"os"
 
 	"cloud.google.com/go/storage"
+	_ "github.com/mattn/go-sqlite3"
+	"gopkg.in/gorp.v1"
 )
 
 var bucketName = "storagedb"
-var objectPath = "sample.txt"
+var objectPath = "storagedb.sqlite3"
 
 func objectHandle(ctx context.Context) (*storage.ObjectHandle, error) {
 	client, err := storage.NewClient(ctx)
@@ -72,4 +75,10 @@ func downloadFile(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func initDb() (*gorp.DbMap, error) {
+	db, err := sql.Open("sqlite3", objectPath)
+	dbmap := &gorp.DbMap{Db: db, Dialect: gorp.SqliteDialect{}}
+	return dbmap, err
 }

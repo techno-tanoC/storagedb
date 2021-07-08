@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"log"
@@ -16,39 +15,41 @@ func main() {
 
 	ctx := context.Background()
 
+	log.Print("Downloading...")
 	err := downloadFile(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	go func() {
-		for {
-			func() {
-				scanner := bufio.NewScanner(os.Stdin)
-				ok := scanner.Scan()
-				if !ok {
-					log.Fatal("scanner error")
-				}
-				line := scanner.Text()
-				log.Print(line)
-
-				f, err := os.Create(objectPath)
-				if err != nil {
-					log.Fatal(err)
-				}
-				defer f.Close()
-
-				_, err = fmt.Fprint(f, line+"\n")
-				if err != nil {
-					log.Fatal(err)
-				}
-			}()
+		dbmap, err := initDb()
+		if err != nil {
+			log.Fatal(err)
 		}
+		defer dbmap.Db.Close()
+
+		count, err := dbmap.SelectInt("select count from counter")
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Printf("count: %d", count)
+
+		log.Print("incrementing...")
+		_, err = dbmap.Exec("update counter set count = count + 1")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		count, err = dbmap.SelectInt("select count from counter")
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Printf("new count: %d", count)
 	}()
 
 	<-sigs
 
-	log.Print("")
+	fmt.Println("")
 	log.Print("Uploading...")
 	err = uploadFile(ctx)
 	if err != nil {
